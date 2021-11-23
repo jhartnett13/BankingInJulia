@@ -1,5 +1,6 @@
 using CSV
 using DataFrames
+using Dates
 
 function openFile(user)
     # code to open the file contatining the users info
@@ -33,19 +34,53 @@ end
 
 
 function createAccount()
+    # does this function do too much? it makes sense to me to have it all here
     println("Welcome! Thanks for opening a new account.")
-    println("Enter your name: \n")
+    println("Enter your name: \n") # get the users name
     name = readline()
-    println("Create a password for your acount: \n")
-    password1 = readline()
-    # would like to add in a feature to type in the password twice and make sure it matches
-    # need to think about how this will work more
-    println()
 
-    # -- after signing in, allow the user to do other things without haveing to quit
+    password1 = 1 # have the user create a password
+    while typeof(password1) != String # the passwords having to be a string makes the dataframe easier to work with
+        println("Create a password for your account. Passwords must start with a letter: \n")
+        password1 = readline()
+    end
+    
+    # have the user enter their password again to verify that they match
+    password2 = 2
+    while password1 != password2
+        println("Please verify your password: ")
+        password2 = readline()
+    end
+
+
+    # have the user enter a starting balance for their account
+    println("Enter your accounts starting balance: \$")
+    startBalance = readline()
+    startBalance = parse(Int64, startBalance) #get an int of the start balance
+
+    # create a file that will track their data
+    timeStamp = Dates.now()
+    timeStamp = Dates.format(timeStamp, "yyyy-mm-dd HH:MM:SS")
+
+    println(timeStamp)
+
+    userFileName = name * timeStamp *".csv"
+
+    println(userFileName)
+
+    # create an actual .csv file
+
+    # write their data to the user file
 
 
 
+    # -- after signing in, allow the user to do other things without having to quit and go through the whole loop again
+
+end
+
+function useProgram()
+    #once a user signs in, they will be directed here so signing in isn't an option anymore
+    #once they exit from this loop they will be back at the signin /exit screen
 
 
 end
