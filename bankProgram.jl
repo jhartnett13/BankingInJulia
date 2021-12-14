@@ -1,29 +1,28 @@
 using CSV
 using DataFrames
 using Dates
+using Plots
 
 function signIn()
-    ### need to account for what to do if the user doesn't exist in the data set/ the password is incorrect
 
     println("Enter your name: ") # get the users name
     username = readline()
-    df = CSV.read("userAccounts.csv", DataFrame) # dataframe of the users
-    df2 = filter(:name => ==(username), df) # find the users name in the data set, make a data set of the users with that name
-    println(df2)
+    df = CSV.read("userAccounts.csv", DataFrame) # dataframe of the user
+    df2 = filter(:userName => ==(username), df) # find the users name in the data set, make a data set of the users with that name
+
     println("Enter your password: ") # get their password
     pass = readline()
-    userRow = filter(:password => ==(pass), df2)
-    println(userRow)
+    userRow = filter(:password => ==(pass), df2) #this is still a dataframe
 
+    printstyled("\nWelcome, $username \n", color = :cyan) 
+    fileName = userRow[1, "transactionFile"] #the users transaction file
+    
+    useProgram(fileName)
 
-    # once they sign in -- have a second loop to select the other options
-
-    # maybe this should return the file name of the users file??
 end
 
 
 function createAccount()
-    # does this function do too much? it makes sense to me to have it all here
     println("Welcome! Thanks for opening a new account.")
     println("Enter your name: ")
     name = readline()
@@ -55,112 +54,197 @@ function createAccount()
     
     ##########  WRITE THIS TO THE FILE OF ALL THE USERS #########################
     df = CSV.read("userAccounts.csv", DataFrame)
-    println(df)
     push!(df, [name password1 startBalance userFileName])  ## work around is to have the first line be a bunch of nonsense
+    #println(df)
     CSV.write("userAccounts.csv", df)
-    close("userAccounts.csv")
 
     # create a df of the users info
     date3 = Dates.today()
     df = DataFrame(Date = [date3], TransactionAmount = [startBalance], Category = ["Initial Deposit"], AccountTotal = [startBalance] )
-    println(df)
-
+    #println(df)
 
     # create a file for the specific user
     touch(userFileName)
     openFile = open(userFileName, "w")
     CSV.write(userFileName, df)
-    close(userFileName)
+
+    useProgram(userFileName)
 end
 
 
-function useProgram() # might take in the users file name? so that cna be updated/data can be found and spent
+function useProgram(fileName)
 
     #once a user signs in, they will be directed here so signing in isn't an option anymore
     #once they exit from this loop they will be back at the signin /exit screen
 
-    kg = "yes"
+    k = "yes"
     println("What would you like to do? ")
-    while kg == "yes"
-        println("1. Enter a transaction (spending/withdrawl)")
-        println("2. Enter a deposit")          # should transaction and deposit be the same thing???
-        println("3. Set a Budget")
-        println("4. View Statistics")
-        println("5. Quit")
+    while k == "yes"
+        println("1. Enter a transaction (spending/withdrawal)")
+        println("2. Enter a deposit")          
+        println("3. View Statistics")
+        println("4. Quit")
         choice = readline()
         choice = parse(Int64, choice)
         if choice == 1
-            enterTransaction()
+            enterTransaction(fileName)
         elseif choice == 2
-            enterDeposit()
+            enterDeposit(fileName)
         elseif choice == 3
-            setBudget()
+            getStats(fileName)
         elseif choice == 4
-            getStats()
-        elseif choice == 5
-            global kg = "no"
+             k = "no"
 
-        end
-end
-
+        end # end if else
+    end # end loop
+end # end function
 
 
-end
+function enterTransaction(fileName) # take in users file
+
+    g = "yes"
+    while g == "yes"
+        println("Was this transaction 1. a cash withdrawal or 2. a purchase? Press 3 to quit")
+
+        choice = readline()
+        choice = parse(Int64, choice)
+
+        println("What date was the transaction made? Enter in the following format: dd mm yyyy")
+        strDate = readline()
+
+        date = Dates.Date(strDate, "d m y")
+
+        if choice == 1 # cash withdrawal
+            println("Enter the amount of the withdrawal: ")
+            amount = readline()
+            amount = parse(Float64, amount)
+            category = "Withdrawal"
+
+        elseif choice == 2 # purchase
+            println("Enter the amount of the purchase: ")
+            amount = readline()
+            amount = parse(Float64, amount)
+            println("Select the category of the purchase: \n1. Shopping \n2. Food \n3. Entertainment \n4. Bills \n5.Other") # break this up if i have time later
+            c = readline()
+            c = parse(Int64, c)
+            if c == 1
+                category = "Shopping"
+            elseif c == 2
+                category = "Food"
+            elseif c == 3
+                category = "Entertainment"
+            elseif c == 4
+                category = "Bills"
+            else
+                category = "Other"
+            end # end if else
+            
+
+        elseif choice == 3
+            g = "no"
+    
+        end # end if else
+
+    # update the account info
+
+    df = CSV.read(fileName, DataFrame) #open the file as a dataframe
+    numRows = nrow(df) #how many rows are in the dataframe
+    accountBalance = df[numRows, "AccountTotal"] #get the current account total
+    newAccountBalance = accountBalance - amount # new account balance - subtract the money just spent
+
+    push!(df, [date amount category newAccountBalance])  ##  push to the dataframe date, transactionAmount, category, AccountTotal
+    println(df)
+    CSV.write(fileName, df)
+
+    
+    printstyled("\nYour account balance is currently $newAccountBalance \n", color = :cyan) #print out a message with the account balance
+    
+    println("Would you like to enter another transaction? Enter 1 for yes and 2 for no ")
+    choice = readline()
+    choice = parse(Int64, choice)
+    if choice != 1
+        g = "no"
+    end #end if else
+    end # end loop
+end # end function
 
 
-function enterTransaction() # take in users file
-    kg = "yes"
-    while kg == "yes"
-        #enter the amount of the transaction
 
-        #ask for the type of the transaction
+function enterDeposit(fileName) # take in the users file
 
-        # if withdrawl then subtract the value from their total amount
+    g = "yes"
+    while g == "yes"
+        println("Enter the amount of the deposit: ") # amount of the deposit
+        amount = readline()
+        amount = parse(Float64, amount)
+
+        println("What date was the transaction made? Enter in the following format: dd mm yyyy") # date of the deposit
+        strDate = readline()
+        date = Dates.Date(strDate, "d m y")
+
+        category = "Deposit"
+
+        df = CSV.read(fileName, DataFrame)
+        numRows = nrow(df) #how many rows are in the dataframe
+        accountBalance = df[numRows, "AccountTotal"] #get the current account total
+        newAccountBalance = accountBalance + amount # new account balance - add the money from the deposit
+
+        push!(df, [date amount category newAccountBalance])  ##  push to the dataframe date, transactionAmount, category, AccountTotal
+        println(df) #leaving this print in just to show dataframes
+        CSV.write(fileName, df)
+
+    
+        printstyled("\nYour account balance is currently $newAccountBalance \n", color = :cyan) #print out a message with the account balance
+    
+        println("Would you like to enter another Deposit? Enter 1 for yes and 2 for no ")
+        choice = readline()
+        choice = parse(Int64, choice)
+        if choice != 1
+            g = "no"
+        end # End if else
+    end #End while loop
+end #end function
 
 
+function getStats(fileName)
+    g = "yes"
+    while g == "yes"
+    println("What would you like to see? 1. Number of transactions by category 2. Total money per transaction category")
+    choice = readline()
+    choice = parse(Int64, choice)
+    if choice == 1
+        df = CSV.read(fileName, DataFrame)
+        categoryCount = combine(groupby(df, :Category), nrow=>:count)
+        bar(categoryCount.Category, categoryCount.count, title = "Number of Transactions by Category", color = :pink, legend = false)
+        savefig("numTransactions.png")
 
-
+    elseif choice == 2
+        gdf = groupby(df, :Category)
+        categorySum = combine(gdf, :TransactionAmount => sum)
+        bar(categorySum.Category, categorySum.TransactionAmount_sum, title = "Total Money in Each Type of Transaction", color = :pink, legend = false)
+        savefig("amountTransactions.png")
     end
 
 
-
-    println("Enter the amount you spent: \$")
-    amount = readline()
-    amount = parse(Float64, amount)
-    println(amount)
-
-    # ask the user for the transaction date, amount, and category. other data TBD
-    # write the data to a file
-    # keeping track of the balance
-end
-
-function enterDeposit() # take in the users file
+    println("Would you like to see some more stats? Enter 1 for yes and 2 for no ")
+    choice = readline()
+    choice = parse(Int64, choice)
+    if choice != 1
+        g = "no"
+    end # End if else
 
 
-
-    # ask the user for the deposit amount and date
-    # update the account balance
-end 
-
-function setBudget()
-    # will ask the user to select the category and set the percent of their budget to make the category
-    # percents can not exceed 100%
-    # will need to adjust based on the users balance
-
-    # how much would you like to spend each month
-    # 
-end 
-
-function getStats()
-    # will give the user different options for stats they can get about their account
-    # viewing spending by category, looking at data within a particular month, etc.
-end
+ end #end loop
+    
+end #end function
 
 
 ## main loop
 kg = "yes"
 
-println("Welcome! What would you like to do? ")
+printstyled("Welcome to the Bank of Julia!", color = :magenta)
+printstyled("\nWhat would you like to do?\n", color = :magenta)
+
 while kg == "yes"
     println("1. Sign in to my account")
     println("2. Create a new account")
@@ -175,5 +259,8 @@ while kg == "yes"
         global kg = "no"
 
     end
+
 end
+
+printstyled("\nThank you for using the Bank of Julia!", color = :cyan)
 
